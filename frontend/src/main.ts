@@ -29,6 +29,9 @@ function gMoves(board: ChessField[][], i: number, j: number) {
   else if (piece.type === "knight") {
     gKnightMoves(board, i, j);
   }
+  else if (piece.type === "bishop") {
+    gBishopMoves(board, i, j);
+  }
 }
 
 function gPawnMoves(board: ChessField[][], i: number, j: number) {
@@ -344,6 +347,79 @@ function gBottomKnightMoves(board: ChessField[][], i: number, j: number): any {
           canRemove: true
         });
       }
+    }
+  }
+}
+
+function gBishopMoves(board: ChessField[][], i: number, j: number) {
+  const piece = board[i][j] as Piece;
+  const positions = [];
+  
+  for (let k = 1; board[i + k][j + k]; k++) {
+    if (board[i + k][j + k] === "EMPTY") {
+      positions.push({
+        field: {i: i + k, j: j + k}
+      });
+    }
+    else {
+      if ((<Piece>board[i + k][j + k]).color !== piece.color) {
+        positions.push({
+          field: {i: i + k, j: j + k},
+          canRemove: true
+        });
+      }
+      break;
+    }
+  }
+
+  for (let k = 1; board[i + k][j - k]; k++) {
+    if (board[i + k][j - k] === "EMPTY") {
+      positions.push({
+        field: {i: i + k, j: j - k}
+      });
+    }
+    else {
+      if ((<Piece>board[i + k][j - k]).color !== piece.color) {
+        positions.push({
+          field: {i: i + k, j: j - k},
+          canRemove: true
+        });
+      }
+      break;
+    }
+  }
+
+  for (let k = 1; board[i - k][j + k]; k++) {
+    if (board[i - k][j + k] === "EMPTY") {
+      positions.push({
+        field: {i: i - k, j: j + k}
+      });
+    }
+    else {
+      if ((<Piece>board[i - k][j + k]).color !== piece.color) {
+        positions.push({
+          field: {i: i - k, j: j + k},
+          canRemove: true
+        });
+      }
+      break;
+    }
+  }
+
+  for (let k = 1; board[i - k][j - k]; k++) {
+    if (board[i - k][j - k] === "EMPTY") {
+      positions.push({
+        field: {i: i - k, j: j - k}
+      });
+    }
+    else {
+      if ((<Piece>board[i - k][j - k]).color !== piece.color) {
+        positions.push({
+          field: {i: i - k, j: j - k},
+          canRemove: true
+        });
+      }
+      break;
     }
   }
 }
