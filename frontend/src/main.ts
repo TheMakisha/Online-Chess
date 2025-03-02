@@ -2,6 +2,7 @@
 type PieceType = "pawn" | "rook" | "king" | "queen" | "bishop" | "knight" | null;
 type PieceColor = "black" | "white";
 type ChessField = Piece | "EMPTY";
+
 //knight - skakac - ide u L
 //bishop - lovac - ide dijagonalno
 //rook - top - gore/dole/levo desno
@@ -16,10 +17,6 @@ interface GameState {
 }
 
 
-//whitePieces - niz figura
-//blackPieces - niz figura
-//Svaka figura neka ima svoju i,j poziciju na Chessboardu
-
 function gMoves(board: ChessField[][], i: number, j: number) {
   const piece = board[i][j] as Piece;
   const positions = [];
@@ -27,80 +24,10 @@ function gMoves(board: ChessField[][], i: number, j: number) {
     gPawnMoves(board, i, j);
   }
   else if (piece.type === "rook") {
-    for(let k = i + 1; board[k][j] !== undefined; k++) {
-      if (board[k][j] === "EMPTY") {
-        positions.push({
-          field: {i: k, j: j}
-        });
-      }
-      else {
-        const otherPiece = board[k][j] as Piece;
-        if (otherPiece.color !== piece.color) {
-          positions.push({
-            field: {i: k, j: j},
-            canRemove: true
-          });
-        }
-      }
-    }
-    
-    for(let k = i - 1; board[k][j] !== undefined; k--) {
-      if (board[k][j] === "EMPTY") {
-        positions.push({
-          field: {i: k, j: j}
-        });
-      }
-      else {
-        const otherPiece = board[k][j] as Piece;
-        if (otherPiece.color !== piece.color) {
-          positions.push({
-            field: {i: k, j: j},
-            canRemove: true
-          });
-        }
-      }
-    }
-
-    let leftIterator = j - 1;
-    let rightIterator = j + 1;
-    while (board[i][leftIterator] !== undefined && board[i][rightIterator] !== undefined) {
-      if (board[i][leftIterator] !== undefined) {
-        if (board[i][leftIterator] === "EMPTY") {
-          positions.push({
-            field: {i: i, j: leftIterator}
-          });
-        }
-        else {
-          const otherPiece = board[i][leftIterator] as Piece;
-          if (otherPiece.color !== piece.color) {
-            positions.push({
-              field: {i: i, j: leftIterator},
-              canRemove: true
-            });
-          }
-        }
-        leftIterator--;
-      }
-
-      if (board[i][rightIterator] !== undefined) {
-        if (board[i][rightIterator] === "EMPTY") {
-          positions.push({
-            field: {i: i, j: rightIterator}
-          });
-        }
-        else {
-          const otherPiece = board[i][rightIterator] as Piece;
-          if (otherPiece.color !== piece.color) {
-            positions.push({
-              field: {i: i, j: rightIterator},
-              canRemove: true
-            });
-          }
-        }
-        rightIterator++;
-      }
-    }
-    
+    gRookMoves(board, i, j);
+  }
+  else if (piece.type === "knight") {
+    gKnightMoves(board, i, j);
   }
 }
 
@@ -174,6 +101,251 @@ function gPawnMoves(board: ChessField[][], i: number, j: number) {
   }
 
   return positions;
+}
+
+function gRookMoves(board: ChessField[][], i: number, j: number) {
+  const piece = board[i][j] as Piece;
+  const positions = [];
+  let topIterator = i + 1;
+  let bottomIterator = i - 1;
+
+  while (board[topIterator][j] && board[bottomIterator][j]) {
+    if (board[topIterator][j] !== undefined) {
+      if (board[topIterator][j] === "EMPTY") {
+        positions.push({
+          field: { i: topIterator, j: j }
+        });
+      }
+      else {
+        const otherPiece = board[topIterator][j] as Piece;
+        if (otherPiece.color !== piece.color) {
+          positions.push({
+            field: { i: topIterator, j: j },
+            canRemove: true
+          });
+        }
+      }
+      topIterator++;
+    }
+
+    if (board[bottomIterator][j] !== undefined) {
+      if (board[bottomIterator][j] === "EMPTY") {
+        positions.push({
+          field: { i: bottomIterator, j: j }
+        });
+      }
+      else {
+        const otherPiece = board[bottomIterator][j] as Piece;
+        if (otherPiece.color !== piece.color) {
+          positions.push({
+            field: { i: bottomIterator, j: j },
+            canRemove: true
+          });
+        }
+      }
+      bottomIterator--;
+    }
+  }
+
+  let leftIterator = j - 1;
+  let rightIterator = j + 1;
+  while (board[i][leftIterator] && board[i][rightIterator]) {
+    if (board[i][leftIterator] !== undefined) {
+      if (board[i][leftIterator] === "EMPTY") {
+        positions.push({
+          field: { i: i, j: leftIterator }
+        });
+      }
+      else {
+        const otherPiece = board[i][leftIterator] as Piece;
+        if (otherPiece.color !== piece.color) {
+          positions.push({
+            field: { i: i, j: leftIterator },
+            canRemove: true
+          });
+        }
+      }
+      leftIterator--;
+    }
+
+    if (board[i][rightIterator] !== undefined) {
+      if (board[i][rightIterator] === "EMPTY") {
+        positions.push({
+          field: { i: i, j: rightIterator }
+        });
+      }
+      else {
+        const otherPiece = board[i][rightIterator] as Piece;
+        if (otherPiece.color !== piece.color) {
+          positions.push({
+            field: { i: i, j: rightIterator },
+            canRemove: true
+          });
+        }
+      }
+      rightIterator++;
+    }
+  }
+}
+
+//Skakac potezi
+function gKnightMoves(board: ChessField[][], i: number, j: number) {
+  const piece = board[i][j] as Piece;
+  const positions = [];
+  
+  positions.push(...gLeftKnightMoves(board, i, j));
+  positions.push(...gRightKnightMoves(board, i, j));
+  positions.push(...gTopKnightMoves(board, i, j));
+  positions.push(...gBottomKnightMoves(board, i, j));
+
+  return positions;
+
+}
+
+function gLeftKnightMoves(board: ChessField[][], i: number, j: number): any {
+  const piece = board[i][j] as Piece;
+  const positions = [];
+
+  if (board[i + 1][j - 2]) {
+    if (board[i + 1][j - 2] === "EMPTY") {
+      positions.push({
+        field: {i: i + 1, j: j - 2}
+      });
+    }
+    else {
+      if ((<Piece>board[i + 1][j - 2]).color !== piece.color) {
+        positions.push({
+          field: {i: i + 1, j: j - 2},
+          canRemove: true
+        })
+      }
+    }
+  }
+  if (board[i - 1][j - 2]) {
+    if (board[i - 1][j - 2] === "EMPTY") {
+      positions.push({
+        field: {i: i - 1, j: j - 2}
+      });
+    }
+    else {
+      if ((<Piece>board[i - 1][j - 2]).color !== piece.color) {
+        positions.push({
+          field: {i: i - 1, j: j - 2},
+          canRemove: true
+        });
+      }
+    }
+  }
+}
+
+function gRightKnightMoves(board: ChessField[][], i: number, j: number): any {
+  const piece = board[i][j] as Piece;
+  const positions = [];
+
+  if (board[i + 1][j + 2]) {
+    if (board[i + 1][j + 2] === "EMPTY") {
+      positions.push({
+        field: {i: i + 1, j: j + 2}
+      });
+    }
+    else {
+      if ((<Piece>board[i + 1][j + 2]).color !== piece.color) {
+        positions.push({
+          field: {i: i + 1, j: j + 2},
+          canRemove: true
+        })
+      }
+    }
+  }
+  if (board[i - 1][j + 2]) {
+    if (board[i - 1][j + 2] === "EMPTY") {
+      positions.push({
+        field: {i: i - 1, j: j + 2}
+      });
+    }
+    else {
+      if ((<Piece>board[i - 1][j + 2]).color !== piece.color) {
+        positions.push({
+          field: {i: i - 1, j: j + 2},
+          canRemove: true
+        });
+      }
+    }
+  }
+}
+
+function gTopKnightMoves(board: ChessField[][], i: number, j: number): any {
+  const piece = board[i][j] as Piece;
+  const positions = [];
+
+  if (board[i + 2][j - 1]) {
+    if (board[i + 2][j - 1] === "EMPTY") {
+      positions.push({
+        field: {i: i + 2, j: j - 1}
+      });
+    }
+    else {
+      if ((<Piece>board[i + 2][j - 1]).color !== piece.color) {
+        positions.push({
+          field: {i: i + 2, j: j - 1},
+          canRemove: true
+        })
+      }
+    }
+  }
+
+  if (board[i + 2][j + 1]) {
+    if (board[i + 2][j + 1] === "EMPTY") {
+      positions.push({
+        field: {i: i + 2, j: j + 1}
+      });
+    }
+    else {
+      if ((<Piece>board[i + 2][j - 1]).color !== piece.color) {
+        positions.push({
+          field: {i: i + 2, j: j - 1},
+          canRemove: true
+        });
+      }
+    }
+  }
+}
+
+function gBottomKnightMoves(board: ChessField[][], i: number, j: number): any {
+  const piece = board[i][j] as Piece;
+  const positions = [];
+
+  if (board[i - 2][j - 1]) {
+    if (board[i - 2][j - 1] === "EMPTY") {
+      positions.push({
+        field: {i: i - 2, j: j - 1}
+      });
+    }
+    else {
+      if ((<Piece>board[i - 2][j - 1]).color !== piece.color) {
+        positions.push({
+          field: {i: i - 2, j: j - 1},
+          canRemove: true
+        })
+      }
+    }
+  }
+
+  if (board[i - 2][j + 1]) {
+    if (board[i - 2][j + 1] === "EMPTY") {
+      positions.push({
+        field: {i: i - 2, j: j + 1}
+      });
+    }
+    else {
+      if ((<Piece>board[i - 2][j + 1]).color !== piece.color) {
+        positions.push({
+          field: {i: i - 2, j: j + 1},
+          canRemove: true
+        });
+      }
+    }
+  }
 }
 
 
