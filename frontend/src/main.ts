@@ -1,5 +1,5 @@
 
-type PieceType = "pawn" | "rook" | "king" | "queen" | "bishop" | "knight" | null;
+type PieceType = "pawn" | "rook" | "king" | "queen" | "bishop" | "knight";
 type PieceColor = "black" | "white";
 type ChessField = Piece | "EMPTY";
 
@@ -31,6 +31,12 @@ function gMoves(board: ChessField[][], i: number, j: number) {
   }
   else if (piece.type === "bishop") {
     gBishopMoves(board, i, j);
+  }
+  else if (piece.type === "queen") {
+    gQueenMoves(board, i, j);
+  }
+  else {
+    gKingMoves(board, i, j);
   }
 }
 
@@ -106,93 +112,106 @@ function gPawnMoves(board: ChessField[][], i: number, j: number) {
   return positions;
 }
 
-function gRookMoves(board: ChessField[][], i: number, j: number) {
+function gRookMoves(board: ChessField[][], i: number, j: number): any {
   const piece = board[i][j] as Piece;
   const positions = [];
-  let topIterator = i + 1;
-  let bottomIterator = i - 1;
 
-  while (board[topIterator][j] && board[bottomIterator][j]) {
-    if (board[topIterator][j] !== undefined) {
-      if (board[topIterator][j] === "EMPTY") {
-        positions.push({
-          field: { i: topIterator, j: j }
-        });
-      }
-      else {
-        const otherPiece = board[topIterator][j] as Piece;
-        if (otherPiece.color !== piece.color) {
-          positions.push({
-            field: { i: topIterator, j: j },
-            canRemove: true
-          });
+  //idemo gore
+  for (let k = 1; board[i + k][j]; k++) {
+    if (board[i + k][j] === "EMPTY") {
+      positions.push({
+        field: {
+          i: i + k, 
+          j: j
         }
-      }
-      topIterator++;
+      })
     }
-
-    if (board[bottomIterator][j] !== undefined) {
-      if (board[bottomIterator][j] === "EMPTY") {
+    else {
+      if ((<Piece>board[i + k][j]).color !== piece.color) {
         positions.push({
-          field: { i: bottomIterator, j: j }
+          field: {
+            i: i + k,
+            j: j
+          },
+          canRemove: true
         });
       }
-      else {
-        const otherPiece = board[bottomIterator][j] as Piece;
-        if (otherPiece.color !== piece.color) {
-          positions.push({
-            field: { i: bottomIterator, j: j },
-            canRemove: true
-          });
-        }
-      }
-      bottomIterator--;
+      break;
     }
   }
-
-  let leftIterator = j - 1;
-  let rightIterator = j + 1;
-  while (board[i][leftIterator] && board[i][rightIterator]) {
-    if (board[i][leftIterator] !== undefined) {
-      if (board[i][leftIterator] === "EMPTY") {
-        positions.push({
-          field: { i: i, j: leftIterator }
-        });
-      }
-      else {
-        const otherPiece = board[i][leftIterator] as Piece;
-        if (otherPiece.color !== piece.color) {
-          positions.push({
-            field: { i: i, j: leftIterator },
-            canRemove: true
-          });
+  //idemo dole
+  for (let k = 1; board[i - k][j]; k++) {
+    if (board[i - k][j] === "EMPTY") {
+      positions.push({
+        field: {
+          i: i - k, 
+          j: j
         }
-      }
-      leftIterator--;
+      })
     }
-
-    if (board[i][rightIterator] !== undefined) {
-      if (board[i][rightIterator] === "EMPTY") {
+    else {
+      if ((<Piece>board[i - k][j]).color !== piece.color) {
         positions.push({
-          field: { i: i, j: rightIterator }
+          field: {
+            i: i - k,
+            j: j
+          },
+          canRemove: true
         });
       }
-      else {
-        const otherPiece = board[i][rightIterator] as Piece;
-        if (otherPiece.color !== piece.color) {
-          positions.push({
-            field: { i: i, j: rightIterator },
-            canRemove: true
-          });
+      break;
+    }
+  }
+  //idemo levo
+  for (let k = 1; board[i][j - k]; k++) {
+    if (board[i][j - k] === "EMPTY") {
+      positions.push({
+        field: {
+          i: i, 
+          j: j - k
         }
+      })
+    }
+    else {
+      if ((<Piece>board[i][j - k]).color !== piece.color) {
+        positions.push({
+          field: {
+            i: i,
+            j: j - k
+          },
+          canRemove: true
+        });
       }
-      rightIterator++;
+      break;
+    }
+  }
+  //idemo desno
+  for (let k = 1; board[i][j + k]; k++) {
+    if (board[i][j + k] === "EMPTY") {
+      positions.push({
+        field: {
+          i: i, 
+          j: j + k
+        }
+      })
+    }
+    else {
+      if ((<Piece>board[i][j + k]).color !== piece.color) {
+        positions.push({
+          field: {
+            i: i,
+            j: j + k
+          },
+          canRemove: true
+        });
+      }
+      break;
     }
   }
 }
 
 //Skakac potezi
-function gKnightMoves(board: ChessField[][], i: number, j: number) {
+function gKnightMoves(board: ChessField[][], i: number, j: number): any {
   const piece = board[i][j] as Piece;
   const positions = [];
   
@@ -351,7 +370,7 @@ function gBottomKnightMoves(board: ChessField[][], i: number, j: number): any {
   }
 }
 
-function gBishopMoves(board: ChessField[][], i: number, j: number) {
+function gBishopMoves(board: ChessField[][], i: number, j: number): any {
   const piece = board[i][j] as Piece;
   const positions = [];
   
@@ -422,6 +441,17 @@ function gBishopMoves(board: ChessField[][], i: number, j: number) {
       break;
     }
   }
+}
+
+function gQueenMoves(board: ChessField[][], i: number, j: number) {
+  const positions = [];
+  positions.push(...gRookMoves(board, i, j))
+  positions.push(...gBishopMoves(board, i, j));
+  return positions;
+}
+
+function gKingMoves(board: ChessField[][], i: number, j: number) {
+  
 }
 
 
