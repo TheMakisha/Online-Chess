@@ -1,43 +1,26 @@
-
-type PieceType = "pawn" | "rook" | "king" | "queen" | "bishop" | "knight";
-type PieceColor = "black" | "white";
-type ChessField = Piece | "EMPTY";
-
-//knight - skakac - ide u L
-//bishop - lovac - ide dijagonalno
-//rook - top - gore/dole/levo desno
-
-interface Piece {
-  type: PieceType;
-  color: PieceColor;
-}
-
-interface GameState {
-  board: ChessField[][];
-}
-
-
-function gMoves(board: ChessField[][], i: number, j: number) {
+function gMoves(board: ChessField[][], i: number, j: number): any {
   const piece = board[i][j] as Piece;
-  const positions = [];
+  let positions;
   if (piece.type === "pawn") {
-    gPawnMoves(board, i, j);
+    positions = gPawnMoves(board, i, j);
   }
   else if (piece.type === "rook") {
-    gRookMoves(board, i, j);
+    positions = gRookMoves(board, i, j);
   }
   else if (piece.type === "knight") {
-    gKnightMoves(board, i, j);
+    positions = gKnightMoves(board, i, j);
   }
   else if (piece.type === "bishop") {
-    gBishopMoves(board, i, j);
+    positions = gBishopMoves(board, i, j);
   }
   else if (piece.type === "queen") {
-    gQueenMoves(board, i, j);
+    positions = gQueenMoves(board, i, j);
   }
   else {
-    gKingMoves(board, i, j);
+    positions = gKingMoves(board, i, j);
   }
+
+  return positions;
 }
 
 function gPawnMoves(board: ChessField[][], i: number, j: number) {
@@ -450,8 +433,55 @@ function gQueenMoves(board: ChessField[][], i: number, j: number) {
   return positions;
 }
 
+function isKingInCheck(board: ChessField[][], color: PieceColor) {
+  let kingRowPosition;
+  let kingColumnPosition;
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      let piece = board[i][j] as Piece;
+      if (piece.type === "king" && piece.color === color) {
+        kingRowPosition = i;
+        kingColumnPosition = j;
+        break;
+      }
+    }
+  }
+
+  const moves = [];
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      let piece = board[i][j] as Piece;
+      if (board[i][j] !== "EMPTY" && piece.color !== color && piece.type !== "king") {
+        moves.push(...gMoves(board, i, j));
+      }
+    }
+  }
+}
+
 function gKingMoves(board: ChessField[][], i: number, j: number) {
-  
+  const piece = board[i][j] as Piece;
+  const checkPositions: OutputMoves[] = [];
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      if (board[i][j] !== "EMPTY") {
+        const otherPiece = board[i][j] as Piece;
+        if (otherPiece.type !== "king" && otherPiece.color !== piece.color) {
+          checkPositions.push(...gMoves(board, i, j));
+        }
+      }
+    }
+  }
+
+  const possiblePositions = [
+    [i, j - 1],
+    [i, j + 1],
+    [i + 1, j],
+    [i - 1, j],
+    [i + 1, j - 1],
+    [i + 1, j + 1],
+    [i - 1, j - 1],
+    [i - 1, j + 1]
+  ];
 }
 
 
