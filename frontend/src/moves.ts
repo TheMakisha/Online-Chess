@@ -1,15 +1,6 @@
 
 
-//Ulaz: Pozicija figure
-//Izlaz: Pozicije na koje figura sme da ode i ako ima neka figura koju moze da skloni polje ce biti obelezeno
-/*
 
-//Izlaz format: {
-  field: "A1",
-  canRemove?: true
-}
-
-*/
 enum Name {
   PAWN,
   ROOK,
@@ -49,6 +40,20 @@ function getMoves(board: ChessPiece[][], position: Position): Move[] {
 
   const piece = board[position.row][position.column];
 
+  const isKingInCheck = checkIfTheKingIsInCheck(board, piece.color);
+
+  if (!isKingInCheck) {
+    moves.push(...calculateMoves(board, position));
+  }
+
+  return moves;
+}
+
+function calculateMoves(board: ChessPiece[][], position: Position): Move[] {
+  const moves: Move[] = [];
+
+  const piece = board[position.row][position.column];
+
   switch (piece.name) {
     case Name.PAWN: moves.push(...getPawnMoves(piece as Pawn, board, position)); break;
     case Name.ROOK: moves.push(...getRookMoves(piece, board, position)); break;
@@ -61,10 +66,44 @@ function getMoves(board: ChessPiece[][], position: Position): Move[] {
   return moves;
 }
 
-function getPawnMoves(pawn: Pawn, board: ChessPiece[][], position: Position): Move[] {
-  if (pawn.color == Color.WHITE) return getWhitePawnMoves(pawn, board, position);
-  else return getBlackPawnMoves(pawn, board, position);
+function checkIfTheKingIsInCheck(board: ChessPiece[][], color: Color) {
+  const enemyPiecesMoves: Move[] = getAllEnemyPieces(board, color == Color.WHITE ? Color.BLACK : Color.WHITE);
+  const myKingPosition = findTheKingPosition(board, color);
+  const isKingInCheck = enemyPiecesMoves.map(move => move.position)
+  .filter(position => position.row == myKingPosition.row && position.column == myKingPosition.column)
+  .length == 0 ? false : true;
+
+  return isKingInCheck;
 }
+
+function findTheKingPosition(board: ChessPiece[][], color: Color): Position {
+  const position: Position = {row: 0, column: 0};
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      if (board[i][j].name == Name.KING && board[i][j].color == color) {
+        position.row = i;
+        position.column = j;
+        break;
+      }
+    }
+  }
+  return position;
+}
+
+function getAllEnemyPieces(board: ChessPiece[][], color: Color): Move[] {
+  const moves: Move[] = [];
+
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      if (board[i][j].name != Name.EMPTY && board[i][j].color == color) {
+        moves.push(...calculateMoves(board, {row: i, column: j}));
+      }
+    }
+  }
+
+  return moves;
+}
+
 
 function isPawnFirstMove(pawn: Pawn, position: Position): boolean {
   if (pawn.color == Color.WHITE && position.row == 1) 
@@ -72,65 +111,66 @@ function isPawnFirstMove(pawn: Pawn, position: Position): boolean {
   if (pawn.color == Color.WHITE && position.row == 6) 
     return true;
   return false;
-}
+} 
 
-function getWhitePawnMoves(pawn: Pawn, board: ChessPiece[][], position: Position): Move[] {
+function getPawnMoves(pawn: Pawn, board: ChessPiece[][], position: Position): Move[] {
   const moves: Move[] = [];
-  let move: Move = {position: position, canRemove: false};
+  const move: Move = {position: position, canRemove: false};
 
+  const currRow = position.row, currColumn = position.column;
+
+  let nRow = position.row + (pawn.color == Color.WHITE ? 1 : -1);
+  let nColumn = position.column;
   const isFirstMove = isPawnFirstMove(pawn, position);
-  if (board[position.row + 1][position.column].name == Name.EMPTY) {
-    move = {position: {row: position.row + 1, column: position.column}, canRemove: false};
-    moves.push(move);
-    if (isFirstMove && board[position.row + 2][position.column].name == Name.EMPTY) {
-      move = {position: {row: position.row + 2, column: position.column}, canRemove: false};
+  let isKingInCheck;
+  if (board[nRow][nColumn].name == Name.EMPTY) {
+    swapTwoPositionsOnTheBoard(board, {row: currRow, column: currColumn}, {row: nRow, column: nColumn});
+    isKingInCheck = checkIfTheKingIsInCheck(board, pawn.color);
+    if (!isKingInCheck) {
+      move.position.row = nRow;
+      move.position.column = nColumn;
+      move.canRemove = false;
       moves.push(move);
+    }
+    swapTwoPositionsOnTheBoard(board, {row: currRow, column: currColumn}, {row: nRow, column: nColumn});
+    nRow = position.row + (pawn.color == Color.WHITE ? 2 : -2);
+    if (isFirstMove && board[nRow][nColumn].name == Name.EMPTY) {
+      swapTwoPositionsOnTheBoard(board, {row: currRow, column: currColumn}, {row: nRow, column: nColumn});
+      isKingInCheck = checkIfTheKingIsInCheck(board, pawn.color);
+      if (!isKingInCheck) {
+        move.position.row = nRow;
+        move.position.column = nColumn;
+        move.canRemove = false;
+        moves.push(move);
+      }
+      swapTwoPositionsOnTheBoard(board, {row: currRow, column: currColumn}, {row: nRow, column: nColumn});
     }
   }
   
-  if (board[position.row + 1][position.column + 1].name != Name.EMPTY) {
-    move.position.row += 1;
-    move.position.column += 1;
-    move.canRemove = true;
-    moves.push(move);
-  }
-
-  if (board[position.row + 1][position.column - 1].name != Name.EMPTY) {
-    move.position.row += 1;
-    move.position.column -= 1;
-    move.canRemove = true;
-    moves.push(move);
-  }
-
-  return moves;
-}
-
-function getBlackPawnMoves(pawn: Pawn, board: ChessPiece[][], position: Position): Move[] {
-  const moves: Move[] = [];
-  let move: Move = {position: position, canRemove: false};
-  
-  const isFirstMove = isPawnFirstMove(pawn, position);
-  if (board[position.row - 1][position.column].name == Name.EMPTY) {
-    move = {position: {row: position.row - 1, column: position.column}, canRemove: false};
-    moves.push(move);
-    if (isFirstMove && board[position.row - 2][position.column].name == Name.EMPTY) {
-      move = {position: {row: position.row - 2, column: position.column}, canRemove: false};
+  nRow = position.row + (pawn.color == Color.WHITE ? 1 : -1)
+  nColumn = position.column + 1;
+  if (board[nRow][nColumn].name != Name.EMPTY) {
+    swapTwoPositionsOnTheBoard(board, {row: currRow, column: currColumn}, {row: nRow, column: nColumn});
+    if (!isKingInCheck) {
+      move.position.row  = nRow;
+      move.position.column = nColumn;
+      move.canRemove = true;
       moves.push(move);
     }
+    swapTwoPositionsOnTheBoard(board, {row: currRow, column: currColumn}, {row: nRow, column: nColumn});
   }
 
-  if (board[position.row - 1][position.column - 1].name != Name.EMPTY) {
-    move.position.row -= 1;
-    move.position.column -= 1;
-    move.canRemove = true;
-    moves.push(move);
-  }
-
-  if (board[position.row - 1][position.column + 1].name != Name.EMPTY) {
-    move.position.row -= 1;
-    move.position.column += 1;
-    move.canRemove = true;
-    moves.push(move);
+  nRow = position.row + (pawn.color == Color.WHITE ? -1 : 1),
+  nColumn = position.column - 1;
+  if (board[nRow][nColumn].name != Name.EMPTY) {
+    swapTwoPositionsOnTheBoard(board, {row: currRow, column: currColumn}, {row: nRow, column: nColumn});
+    if (!isKingInCheck) {
+      move.position.row  = nRow;
+      move.position.column = nColumn;
+      move.canRemove = true;
+      moves.push(move);
+    }
+    swapTwoPositionsOnTheBoard(board, {row: currRow, column: currColumn}, {row: nRow, column: nColumn});
   }
 
   return moves;
@@ -389,23 +429,15 @@ function getKnightMove(knight: ChessPiece, board: ChessPiece[][], position: Posi
   return move;
 }
 
+function swapTwoPositionsOnTheBoard(board: ChessPiece[][], position1: Position, position2: Position) {
+  const piece = board[position1.row][position1.column];
+  board[position1.row][position1.column] = board[position2.row][position2.column];
+  board[position2.row][position2.column] = piece;
+}
+
 // function getKingMoves(king: ChessPiece, board: ChessPiece[][], position: Position): Move[] {
 //   const threatPositions = findPiecesThatThreatenTheKing(king, board);
 
 //   //[ [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1] ].
 // }
 
-function findPiecesThatThreatenTheKing(king: ChessPiece, board: ChessPiece[][]): Position[] {
-  const chessPiecePositions: Position[] = [];
-
-  for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 8; j++) {
-      if (board[i][j].name != Name.EMPTY && board[i][j].color != king.color) {
-        const moves = getMoves(board, {row: i, column: j});
-        moves.map(move => move.position).forEach(position => chessPiecePositions.push(position));
-      }
-    }
-  }
-
-  return chessPiecePositions;
-}
