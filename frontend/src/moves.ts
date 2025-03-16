@@ -1,6 +1,4 @@
 
-
-
 enum Name {
   PAWN,
   ROOK,
@@ -25,6 +23,11 @@ interface Pawn extends ChessPiece {
   isEnPassant: boolean;
 }
 
+const EmptyPiece: ChessPiece = {
+  name: Name.EMPTY,
+  color: Color.WHITE
+}
+
 interface Position {
   row: number;
   column: number;
@@ -40,6 +43,11 @@ function getMoves(board: ChessPiece[][], position: Position): Move[] {
 
   const piece = board[position.row][position.column];
 
+  //Dobili smo figuru na tabli koju igrac zeli da odigra
+  //Prvo moramo da vidimo da li je igracev kralj u opasnosti(u checku)
+  //Ako nije, onda cemo za izabranu figuru da generisemo sve one poteze koji ne stavljaju njegovog kralja u check
+  //A to znaci da cemo za svaki moguci potez te figure(koja postuje osnovna pravila oko preskanja i slicno)
+  //da vidimo da li ona stavlja kralja u opasnost
   const isKingInCheck = checkIfTheKingIsInCheck(board, piece.color);
 
   if (!isKingInCheck) {
@@ -104,15 +112,6 @@ function getAllEnemyPieces(board: ChessPiece[][], color: Color): Move[] {
   return moves;
 }
 
-
-function isPawnFirstMove(pawn: Pawn, position: Position): boolean {
-  if (pawn.color == Color.WHITE && position.row == 1) 
-    return true;
-  if (pawn.color == Color.WHITE && position.row == 6) 
-    return true;
-  return false;
-} 
-
 function getPawnMoves(pawn: Pawn, board: ChessPiece[][], position: Position): Move[] {
   const moves: Move[] = [];
   const move: Move = {position: position, canRemove: false};
@@ -176,224 +175,109 @@ function getPawnMoves(pawn: Pawn, board: ChessPiece[][], position: Position): Mo
   return moves;
 }
 
+function isPawnFirstMove(pawn: Pawn, position: Position): boolean {
+  if (pawn.color == Color.WHITE && position.row == 1) 
+    return true;
+  if (pawn.color == Color.WHITE && position.row == 6) 
+    return true;
+  return false;
+} 
+
 function getRookMoves(rook: ChessPiece, board: ChessPiece[][], position: Position): Move[] {
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]]
+  .map(offset => {
+    const positions: Position[] = [];
+    let row = position.row, column = position.column;
+    while (row > 0 && row < 7 && column > 0 && column < 7) {
+      row += offset[0];
+      column += offset[1];
+      positions.push({row, column});
+    }
+    return positions;
+  })
+  .flatMap(direction => getRookMovesForOneDirection(rook, position, board, direction))
+} 
+
+function getRookMovesForOneDirection(rook: ChessPiece, rookPositon: Position, board: ChessPiece[][], positions: Position[]): Move[] {
   const moves: Move[] = [];
 
-  let cRow, cColumn;
-  let canLeft = true, canRight = true, canUp = true, canDown = true;
-  let piece;
-  let move: Move = {position: position, canRemove: false};
-  for (let i = 1, j = 1; canLeft && canRight && canUp && canDown; i++, j++) {
-    //dole i gore za belog i crnog
-    cRow = position.row - i;
-    cColumn = position.column;
-    piece = board[cRow][cColumn];
-    if (piece) {
-      if (piece.name == Name.EMPTY) {
-        move.position.row = cRow;
-        move.position.column = cColumn;
-        move.canRemove = false;
+  for (const pos of positions) {
+    if (board[pos.row][pos.column].name == Name.EMPTY) {
+      swapTwoPositionsOnTheBoard(board, rookPositon, pos);
+      const isKingInCheck = checkIfTheKingIsInCheck(board, rook.color);
+      if (!isKingInCheck) {
+        const move: Move = {position: pos, canRemove: false};
         moves.push(move);
       }
-      else {
-        if (piece.color != rook.color) {
-          move.position.row = cRow;
-          move.position.column = cColumn;
-          move.canRemove = true;
-          moves.push(move);
-        } 
-        canDown = false;
-      }
-    } 
-    else {
-      canDown = false;
+      swapTwoPositionsOnTheBoard(board, rookPositon, pos);
     }
-
-    //gore i dole za belog i crnog
-    cRow = position.row + i;
-    cColumn = position.column;
-    piece = board[cRow][cColumn];
-    if (piece) {
-      if (piece.name == Name.EMPTY) {
-        move.position.row = cRow;
-        move.position.column = cColumn;
-        move.canRemove = false;
-        moves.push(move);
-      }
-      else {
-        if (piece.color != rook.color) {
-          move.position.row = cRow;
-          move.position.column = cColumn;
-          move.canRemove = true;
-          moves.push(move);
-        } 
-        canUp = false;
-      }
-    } 
     else {
-      canUp = false;
-    }
-
-    //levo i desno za belog i crnog
-    cRow = position.row;
-    cColumn = position.column - 1;
-    piece = board[cRow][cColumn];
-    if (piece) {
-      if (piece.name == Name.EMPTY) {
-        move.position.row = cRow;
-        move.position.column = cColumn;
-        move.canRemove = false;
-        moves.push(move);
-      }
-      else {
-        if (piece.color != rook.color) {
-          move.position.row = cRow;
-          move.position.column = cColumn;
-          move.canRemove = true;
+      if (board[pos.row][pos.column].color != rook.color) {
+        //moramo da uklonimo protivnicku figuru da bismo uspesno proverili da li se pravi check situacija za naseg kralja
+        //jer ako samo swapujemo figure i proverimo moze se desiti da ta figura blokira neku svoju i dobijemo laznu potvrdu
+        //da nema checka, a treba da skinemo figuru da bi utvrdili da li check nastaje.
+        const piece = board[pos.row][pos.column];
+        board[pos.row][pos.column] = EmptyPiece;
+        swapTwoPositionsOnTheBoard(board, rookPositon, pos);
+        const isKingInCheck = checkIfTheKingIsInCheck(board, rook.color);
+        if (!isKingInCheck) {
+          const move: Move = {position: pos, canRemove: true};
           moves.push(move);
-        } 
-        canLeft = false;
+        }
+        swapTwoPositionsOnTheBoard(board, rookPositon, pos);
+        board[pos.row][pos.column] = piece;
       }
-    } 
-    else {
-      canLeft = false;
     }
-
-    //desno i levo za belog i crnog
-    cRow = position.row;
-    cColumn = position.column + 1;
-    piece = board[cRow][cColumn];
-    if (piece) {
-      if (piece.name == Name.EMPTY) {
-        move.position.row = cRow;
-        move.position.column = cColumn;
-        move.canRemove = false;
-        moves.push(move);
-      }
-      else {
-        if (piece.color != rook.color) {
-          move.position.row = cRow;
-          move.position.column = cColumn;
-          move.canRemove = true;
-          moves.push(move);
-        } 
-        canRight = false;
-      }
-    } 
-    else {
-      canRight = false;
-    }
-
   }
 
   return moves;
 }
 
 function getBishopMoves(bishop: ChessPiece, board: ChessPiece[][], position: Position): Move[] {
+  return [[1, -1], [1, 1], [-1, 1], [-1, -1]]
+  .map(offset => {
+    const positions: Position[] = [];
+    let row = position.row, column = position.column;
+    while (row > 0 && row < 7 && column > 0 && column < 7) {
+      row += offset[0];
+      column += offset[1];
+      positions.push({row, column});
+    }
+    return positions;
+  })
+  .flatMap(direction => getBishopMovesForOneDirection(bishop, position, board, direction))
+}
+
+function getBishopMovesForOneDirection(bishop: ChessPiece, bishopPosition: Position, board: ChessPiece[][], positions: Position[]): Move[] {
   const moves: Move[] = [];
 
-  let cRow, cColumn;
-  let canTopLeftDia = true, canTopRightDia = true, canDownLeftDia = true, canDownRightDia = true;
-  let piece;
-  let move: Move = {position: position, canRemove: false};
-  for (let i = 1; canTopLeftDia && canTopRightDia && canDownLeftDia && canDownRightDia; i++) {
-    
-    cRow = position.row + i;
-    cColumn = position.column - i;
-    piece = board[cRow][cColumn];
-    if (piece) {
-      if (piece.name == Name.EMPTY) {
-        move.position.row = cRow;
-        move.position.column = cColumn;
-        move.canRemove = false;
+  for (const pos of positions) {
+    if (board[pos.row][pos.column].name == Name.EMPTY) {
+      swapTwoPositionsOnTheBoard(board, bishopPosition, pos);
+      const isKingInCheck = checkIfTheKingIsInCheck(board, bishop.color);
+      if (!isKingInCheck) {
+        const move: Move = {position: pos, canRemove: false};
         moves.push(move);
       }
-      else {
-        if (piece.color != bishop.color) {
-          move.position.row = cRow;
-          move.position.column = cColumn;
-          move.canRemove = true;
-          moves.push(move);
-        } 
-        canTopLeftDia = false;
-      }
-    } 
-    else {
-      canTopLeftDia = false;
+      swapTwoPositionsOnTheBoard(board, bishopPosition, pos);
     }
-
-    cRow = position.row + i;
-    cColumn = position.column - i;
-    piece = board[cRow][cColumn];
-    if (piece) {
-      if (piece.name == Name.EMPTY) {
-        move.position.row = cRow;
-        move.position.column = cColumn;
-        move.canRemove = false;
-        moves.push(move);
-      }
-      else {
-        if (piece.color != bishop.color) {
-          move.position.row = cRow;
-          move.position.column = cColumn;
-          move.canRemove = true;
-          moves.push(move);
-        } 
-        canTopRightDia = false;
-      }
-    } 
     else {
-      canTopRightDia = false;
-    }
-
-    cRow = position.row - 1;
-    cColumn = position.column - 1;
-    piece = board[cRow][cColumn];
-    if (piece) {
-      if (piece.name == Name.EMPTY) {
-        move.position.row = cRow;
-        move.position.column = cColumn;
-        move.canRemove = false;
-        moves.push(move);
-      }
-      else {
-        if (piece.color != bishop.color) {
-          move.position.row = cRow;
-          move.position.column = cColumn;
-          move.canRemove = true;
+      if (board[pos.row][pos.column].color != bishop.color) {
+        //moramo da uklonimo protivnicku figuru da bismo uspesno proverili da li se pravi check situacija za naseg kralja
+        //jer ako samo swapujemo figure i proverimo moze se desiti da ta figura blokira neku svoju i dobijemo laznu potvrdu
+        //da nema checka, a treba da skinemo figuru da bi utvrdili da li check nastaje.
+        const piece = board[pos.row][pos.column];
+        board[pos.row][pos.column] = EmptyPiece;
+        swapTwoPositionsOnTheBoard(board, bishopPosition, pos);
+        const isKingInCheck = checkIfTheKingIsInCheck(board, bishop.color);
+        if (!isKingInCheck) {
+          const move: Move = {position: pos, canRemove: true};
           moves.push(move);
-        } 
-        canDownLeftDia = false;
+        }
+        swapTwoPositionsOnTheBoard(board, bishopPosition, pos);
+        board[pos.row][pos.column] = piece;
       }
-    } 
-    else {
-      canDownLeftDia = false;
     }
-
-    cRow = position.row - 1;
-    cColumn = position.column + 1;
-    piece = board[cRow][cColumn];
-    if (piece) {
-      if (piece.name == Name.EMPTY) {
-        move.position.row = cRow;
-        move.position.column = cColumn;
-        move.canRemove = false;
-        moves.push(move);
-      }
-      else {
-        if (piece.color != bishop.color) {
-          move.position.row = cRow;
-          move.position.column = cColumn;
-          move.canRemove = true;
-          moves.push(move);
-        } 
-        canDownRightDia = false;
-      }
-    } 
-    else {
-      canDownRightDia = false;
-    }
-
   }
 
   return moves;
@@ -409,20 +293,71 @@ function getQueenMoves(queen: ChessPiece, board: ChessPiece[][], position: Posit
 }
 
 function getKnightMoves(knight: ChessPiece, board: ChessPiece[][], position: Position): Move[] {
-  return [ [1, 2], [1, -2], [-1, 2], [1, 2], [-2, 1], [-2, -1], [2, 1], [2, -1] ].map(pair => {
-    return getKnightMove(knight, board, {row: position.row + pair[0], column: position.column + pair[1]});
-  }).filter(move => move != null);
+  return [ [1, 2], [1, -2], [-1, 2], [1, 2], [-2, 1], [-2, -1], [2, 1], [2, -1] ]
+  .filter(pair => board[position.row + pair[0]][position.column + pair[1]] != undefined)
+  .map(pair => {
+    return getKnightMove(knight, position, board, {row: pair[0], column: pair[1]});
+  })
+  .filter(move => move != null);
 }
 
-function getKnightMove(knight: ChessPiece, board: ChessPiece[][], position: Position): Move | null {
+function getKnightMove(knight: ChessPiece, knightPosition: Position, board: ChessPiece[][], position: Position): Move | null {
   let move: Move | null = null;
 
-  if (board[position.row][position.column]) {
-    if (board[position.row][position.column].name == Name.EMPTY) {
-      move = {position: position, canRemove: false};
+  if (board[position.row][position.column].name == Name.EMPTY) {
+    swapTwoPositionsOnTheBoard(board, knightPosition, position);
+    const isKingInCheck = checkIfTheKingIsInCheck(board, knight.color);
+    if (!isKingInCheck) {
+      move = {position, canRemove: false};
     }
-    else if (board[position.row][position.column].color != knight.color) {
-      move = {position: position, canRemove: true};
+    swapTwoPositionsOnTheBoard(board, knightPosition, position);
+  }
+  else {
+    if (board[position.row][position.column].color != knight.color) {
+      const piece = board[position.row][position.column];
+      board[position.row][position.column] = EmptyPiece;
+      swapTwoPositionsOnTheBoard(board, knightPosition, position);
+      const isKingInCheck = checkIfTheKingIsInCheck(board, knight.color);
+      if (!isKingInCheck) {
+        move = {position, canRemove: true};
+      }
+      swapTwoPositionsOnTheBoard(board, knightPosition, position);
+      board[position.row][position.column] = piece;
+    }
+  }
+
+  return move;
+}
+
+function getKingMoves(king: ChessPiece, board: ChessPiece[][], position: Position): Move[] {
+  return [ [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1] ]
+  .filter( pair => board[position.row + pair[0]][position.column + pair[1]] != undefined)
+  .map( pair => getKingMove(king, position, board, {row: pair[0], column: pair[1]}) )
+  .filter(move => move != null);
+}
+
+function getKingMove(king: ChessPiece, kingPosition: Position, board: ChessPiece[][], position: Position): Move | null {
+  let move: Move | null = null;
+
+  if (board[position.row][position.column].name == Name.EMPTY) {
+    swapTwoPositionsOnTheBoard(board, kingPosition, position);
+    const isKingInCheck = checkIfTheKingIsInCheck(board, king.color);
+    if (!isKingInCheck) {
+      move = {position, canRemove: false};
+    }
+    swapTwoPositionsOnTheBoard(board, kingPosition, position);
+  }
+  else {
+    if (board[position.row][position.column].color != king.color) {
+      const piece = board[position.row][position.column];
+      board[position.row][position.column] = EmptyPiece;
+      swapTwoPositionsOnTheBoard(board, kingPosition, position);
+      const isKingInCheck = checkIfTheKingIsInCheck(board, king.color);
+      if (!isKingInCheck) {
+        move = {position, canRemove: true};
+      }
+      swapTwoPositionsOnTheBoard(board, kingPosition, position);
+      board[position.row][position.column] = piece;
     }
   }
 
@@ -434,10 +369,3 @@ function swapTwoPositionsOnTheBoard(board: ChessPiece[][], position1: Position, 
   board[position1.row][position1.column] = board[position2.row][position2.column];
   board[position2.row][position2.column] = piece;
 }
-
-// function getKingMoves(king: ChessPiece, board: ChessPiece[][], position: Position): Move[] {
-//   const threatPositions = findPiecesThatThreatenTheKing(king, board);
-
-//   //[ [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1] ].
-// }
-
