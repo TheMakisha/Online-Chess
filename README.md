@@ -1,3 +1,1 @@
 # Online-Chess
-
-First commit!
